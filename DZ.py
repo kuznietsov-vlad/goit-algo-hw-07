@@ -29,10 +29,10 @@ class Phone(Field):
 class Birthday(Field):
     def __init__(self, value):
         try:
-            date_value = datetime.strptime(value, "%d.%m.%Y").date()
+            datetime.strptime(value, "%d.%m.%Y")
         except ValueError:
             raise ValueError("Invalid date format. Use DD.MM.YYYY")
-        super().__init__(date_value)
+        super().__init__(value)
 
 
 class Record:
@@ -77,7 +77,7 @@ class Record:
 
     def __str__(self):
         phones_str = '; '.join(p.value for p in self.phones)
-        bday_str = self.birthday.value.strftime('%d.%m.%Y') if self.birthday else 'N/A'
+        bday_str = self.birthday.value if self.birthday else 'N/A'
         return f"Contact name: {self.name.value}, phones: {phones_str}, birthday: {bday_str}"
 
 
@@ -97,7 +97,7 @@ class AddressBook(UserDict):
 
         for record in self.data.values():
             if record.birthday:
-                birthday_date = record.birthday.value
+                birthday_date = datetime.strptime(record.birthday.value, "%d.%m.%Y").date()
                 birthday_this_year = birthday_date.replace(year=today.year)
 
                 if birthday_this_year < today:
@@ -129,6 +129,9 @@ def input_error(func):
     return inner
 
 def parse_input(user_input):
+    user_input = user_input.strip()
+    if not user_input:
+        return "",
     cmd, *args = user_input.split()
     cmd = cmd.strip().lower()
     return cmd, *args
@@ -186,8 +189,12 @@ def show_birthday(args, book: AddressBook):
 def show_upcoming_birthdays(book: AddressBook):
     result = book.get_upcoming_birthdays()
     end_date = datetime.today().date() + timedelta(days=7)
-    return f'Upcoming birthdays from {datetime.today().date()} to {end_date}:\n' + '\n'.join(result)
 
+    if not result:
+        return f"No upcoming birthdays from {datetime.today().date()} to {end_date}."
+
+    formatted = [f"{name}: {date.strftime('%d.%m.%Y')}" for name, date in result]
+    return f'Upcoming birthdays from {datetime.today().date()} to {end_date}:\n' + '\n'.join(formatted)
 #templates ===============================================================================================
 
 menu = """
@@ -228,7 +235,12 @@ def main():
 
     while True:
         user_input = input("Enter a command: ")
-        command, *args = parse_input(user_input)
+        parsed = parse_input(user_input)
+        if not parsed:
+            continue
+        command, *args = parsed
+        if not command:
+            continue
 
         if command in ["close", "exit"]:
             print("Good bye!")
@@ -252,17 +264,17 @@ def main():
         elif command == "all":
             print(book)
 
-        elif command == "add_birthday":
+        elif command == "add-birthday":
             print(add_birthday(args,book))
 
-        elif command == "show_birthday":
+        elif command == "show-birthday":
             print(show_birthday(args, book))
 
         elif command == "birthdays":
             print(show_upcoming_birthdays(book))
-
         else:
             print("Invalid command.")
 
 main()
+
 
