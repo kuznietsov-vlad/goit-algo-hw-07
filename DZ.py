@@ -52,7 +52,16 @@ class Record:
     def add_birthdays(self, value: str):
         if self.birthday is not None:
             raise ValueError('Birthday already set')
-        self.birthday = Birthday(value)
+
+        bday_date = datetime.strptime(value, "%d.%m.%Y").date()
+
+        # Перенесення вихідних (якщо потрібно)
+        if bday_date.weekday() == 5:  # Субота
+            bday_date += timedelta(days=2)
+        elif bday_date.weekday() == 6:  # Неділя
+            bday_date += timedelta(days=1)
+
+        self.birthday = Birthday(bday_date.strftime("%d.%m.%Y"))
         return self.birthday
 
     def show_phones(self):
@@ -96,15 +105,18 @@ class AddressBook(UserDict):
         upcoming_birthdays = []
 
         for record in self.data.values():
-            if record.birthday:
-                birthday_date = datetime.strptime(record.birthday.value, "%d.%m.%Y").date()
-                birthday_this_year = birthday_date.replace(year=today.year)
+            if not record.birthday:
+                continue
+            birthday_date = datetime.strptime(record.birthday.value, "%d.%m.%Y").date()
+            birthday_this_year = birthday_date.replace(year=today.year)
+            delta_days = (birthday_this_year - today).days
+            if 0 <= delta_days <= days:
+                if birthday_this_year.weekday() == 5:
+                    birthday_this_year += timedelta(days=2)
+                elif birthday_this_year.weekday() == 6:
+                    birthday_this_year += timedelta(days=1)
 
-                if birthday_this_year < today:
-                    birthday_this_year = birthday_this_year.replace(year=today.year + 1)
-
-                if 0 <= (birthday_this_year - today).days <= days:
-                    upcoming_birthdays.append((record.name.value, birthday_this_year))
+                upcoming_birthdays.append((record.name.value, birthday_this_year))
 
         return upcoming_birthdays
 
