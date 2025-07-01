@@ -53,13 +53,8 @@ class Record:
         if self.birthday is not None:
             raise ValueError('Birthday already set')
 
-        bday_date = datetime.strptime(value, "%d.%m.%Y").date()
-
-        # Перенесення вихідних (якщо потрібно)
-        if bday_date.weekday() == 5:  # Субота
-            bday_date += timedelta(days=2)
-        elif bday_date.weekday() == 6:  # Неділя
-            bday_date += timedelta(days=1)
+        self.birthday = Birthday(value)
+        return self.birthday
 
         self.birthday = Birthday(bday_date.strftime("%d.%m.%Y"))
         return self.birthday
@@ -110,16 +105,16 @@ class AddressBook(UserDict):
             birthday_date = datetime.strptime(record.birthday.value, "%d.%m.%Y").date()
             birthday_this_year = birthday_date.replace(year=today.year)
             delta_days = (birthday_this_year - today).days
+            adjusted_birthday = birthday_this_year
+            if birthday_this_year.weekday() == 5:
+                adjusted_birthday += timedelta(days=2)
+            elif birthday_this_year.weekday() == 6:
+                adjusted_birthday += timedelta(days=1)
+            delta_days = (adjusted_birthday - today).days
             if 0 <= delta_days <= days:
-                if birthday_this_year.weekday() == 5:
-                    birthday_this_year += timedelta(days=2)
-                elif birthday_this_year.weekday() == 6:
-                    birthday_this_year += timedelta(days=1)
-
-                upcoming_birthdays.append((record.name.value, birthday_this_year))
+                upcoming_birthdays.append((record.name.value, adjusted_birthday))
 
         return upcoming_birthdays
-
 
     def __str__(self):
         return (f'\n=========Address book contacts========== \n'
@@ -192,7 +187,8 @@ def show_birthday(args, book: AddressBook):
     name = args[0]
     record = book.find_record(name)
     if record and record.birthday:
-        return f"{name}'s birthday is on {record.birthday.value.strftime('%d.%m.%Y')}"
+        date_obj = datetime.strptime(record.birthday.value, "%d.%m.%Y").date()
+        return f"{name}'s birthday is on {date_obj.strftime('%d.%m.%Y')}"
     elif record and not record.birthday:
         return f"{name} has no birthday set."
     else:
